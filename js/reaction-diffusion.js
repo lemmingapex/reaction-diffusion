@@ -1,0 +1,155 @@
+// object where GUI settings are stored
+_settings = {
+	feed: 1/5,
+	kill: 1/3,
+	resolution: 512
+};
+
+// canvas is the HTML5 UI element where stuff will be drawn
+var _canvas;
+// webgl context.  Let's me do gl stuff.
+var gl;
+// the program to be run on the GPU.  has vertex and fragment shaders.
+var _program;
+
+function render() {
+	// set the resolution
+	var resolutionLocation = gl.getUniformLocation(_program, "u_resolution");
+	gl.uniform2f(resolutionLocation, _canvas.width, _canvas.height);
+
+	// Clear the canvas
+	// gl.clearColor(0, 0, 0, 0);
+	// gl.clear(gl.COLOR_BUFFER_BIT);
+
+	// Draw it!
+	gl.drawArrays(gl.TRIANGLES, 0, 6);
+	// call to render
+	window.requestAnimationFrame(render, _canvas);
+}
+
+function initTexture(textureCanvas, canvasWidth, canvasHeight) {
+		textureCanvas.width = canvasWidth;
+		textureCanvas.height = canvasHeight;
+		var textureContext = textureCanvas.getContext("2d");
+		var textureImage = textureContext.createImageData(canvasWidth, canvasHeight);
+		var areaPercent = 0.01;
+		for (var i = 0; i < canvasHeight; i += 1) {
+			var rowIndex = i*canvasWidth;
+			for (var j = 0; j < canvasWidth; j += 1) {
+				var index = (rowIndex + j) * 4;
+				textureImage.data[index + 0] = 255;
+				if(i > (canvasHeight/2 - (areaPercent*canvasHeight)) && i < (canvasHeight/2 + (areaPercent*canvasHeight)) && j > (canvasWidth/2 - (areaPercent*canvasWidth)) && j < (canvasWidth/2 + (areaPercent*canvasWidth))) {
+					textureImage.data[index + 1] = 255;
+				} else {
+					textureImage.data[index + 1] = 0;
+				}
+				textureImage.data[index + 2] = 0;
+				textureImage.data[index + 3] = 255;
+			}
+		}
+		textureContext.putImageData(textureImage, 0, 0);
+		return textureCanvas;
+}
+
+function generateTrianglesArrayFromRectangle(x, y, width, height) {
+	var x1 = x;
+	var x2 = x + width;
+	var y1 = y;
+	var y2 = y + height;
+	return new Float32Array([x1,y1, x2,y1, x1,y2, x1,y2, x2,y1, x2,y2]);
+}
+
+function init() {
+	// settings gui with stuff like 'feed rate' and 'kill rate'
+	var gui = new dat.GUI();
+	gui.add(_settings, "feed", 0, 1).name("Feed Rate").listen();
+	gui.add(_settings, "kill", 0, 1).name("Kill Rate").listen();
+	//gui.add(_settings, "resolution", 128, 1024).name("Resolution").listen();
+
+	_canvas = document.getElementById("canvas");
+	_canvas.style.left = "0px";
+	_canvas.style.top = "0px";
+	_canvas.style.width = "100%";
+	_canvas.style.height = "100%";
+	_canvas.style.zIndex = 0;
+	_canvas.width = _canvas.offsetWidth;
+	_canvas.height = _canvas.offsetHeight;
+	//console.log("width, height " + _canvas.width + ", " + _canvas.height);
+
+	// The textures contains the data for the ammount of A an B in the red and green components of the color space.
+	// Two textures are used to make the animation fast and clean.  One texture will contain the previous step, the other texture will contain the current step.  Then the texture data will be swaped.
+	var tex0 = initTexture(document.getElementById("tex0"), _canvas.width, _canvas.height);
+	var tex1 = initTexture(document.getElementById("tex1"), _canvas.width, _canvas.height);
+
+	// this is the opengl stuff
+	gl = _canvas.getContext("webgl2");
+	if (!gl) {
+		console.log("Bummer, no webgl2 support!  Try google chrome?");
+		return;
+	}
+
+	// setup GLSL sharders and program
+	var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+	gl.shaderSource(vertexShader, document.getElementById("2d-vertex-shader").text);
+	gl.compileShader(vertexShader);
+
+	var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+	gl.shaderSource(fragmentShader, document.getElementById("2d-fragment-shader").text);
+	gl.compileShader(fragmentShader);
+
+	_program = gl.createProgram();
+	gl.attachShader(_program, vertexShader);
+	gl.attachShader(_program, fragmentShader);
+	gl.linkProgram(_program);
+	gl.useProgram(_program);
+
+	// Create a buffer for vertex positions
+	var positionBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+	// draw two triangles to cover the image
+	gl.bufferData(gl.ARRAY_BUFFER, generateTrianglesArrayFromRectangle(0.0, 0.0, canvas.width, canvas.height), gl.STATIC_DRAW);
+
+	// provide texture coordinates
+	var texcoordBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+	// draw two triangles to cover the texture
+	gl.bufferData(gl.ARRAY_BUFFER, generateTrianglesArrayFromRectangle(0.0, 0.0, 1.0, 1.0), gl.STATIC_DRAW);
+
+	// Create a texture.
+	var texture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+
+	// parameters to render any resolution size
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+	// Upload the image into the texture.
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex0);
+
+	// look up where the vertex data needs to go.
+	var a_position = gl.getAttribLocation(_program, "a_position");
+	gl.enableVertexAttribArray(a_position);
+	// Tell a_position how to get data out of positionBuffer (ARRAY_BUFFER)
+	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+	var size = 2; // 2 components per iteration
+	var type = gl.FLOAT; // the datatype is 32bit float
+	var normalize = false; // do not normalize
+	var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
+	var offset = 0; // where to start
+	gl.vertexAttribPointer(a_position, size, type, normalize, stride, offset)
+
+	// Tell a_texCoord how to get data out of texcoordBuffer
+	var a_texCoord = gl.getAttribLocation(_program, "a_texCoord");
+	gl.enableVertexAttribArray(a_texCoord);
+	gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
+	gl.vertexAttribPointer(a_texCoord, size, type, normalize, stride, offset)
+
+	// Tell WebGL how to convert from clip space to pixels
+	gl.viewport(0, 0, _canvas.width, _canvas.height);
+
+	render();
+}
+
+window.onload = init;
