@@ -6,6 +6,8 @@
 	<script type="text/javascript" src="js/dat.gui.min.js"></script>
 	<script type="text/javascript" src="js/reaction-diffusion.js"></script>
 	<script id="2d-vertex-shader" type="x-shader/x-vertex">
+		precision mediump float;
+
 		attribute vec2 a_position;
 		attribute vec2 a_texCoord;
 
@@ -29,35 +31,53 @@
 	<script id="2d-fragment-shader" type="x-shader/x-fragment">
 		precision mediump float;
 
-		// uniform vec2 u_resolution;
+		uniform vec2 u_resolution;
 
 		// feed rate
-		// uniform float u_feed;
+		uniform float u_feed;
 		// kill rate
-		// uniform float u_kill;
+		uniform float u_kill;
 
 		// texture
 		uniform sampler2D u_image;
 
-		// float dx = 1.0/u_resolution.x;
-		// float dy = 1.0/u_resolution.y;
-
 		// the texCoords passed in from the vertex shader.
 		varying vec2 v_texCoord;
 
-		//vec2 c0 = texture2D(u_image, v_texCoord+vec2(-dx,-dy));
+		float diffusion_rate_A = 1.0;
+		float diffusion_rate_B = 0.5;
 
-		//vec2 laplacian =
+		float dt = 0.2;
 
 		void main() {
+			float dx = 1.0/u_resolution.x;
+			float dy = 1.0/u_resolution.y;
+
+			vec2 c0 = texture2D(u_image, v_texCoord + vec2(-dx,-dy)).rg;
+			vec2 c1 = texture2D(u_image, v_texCoord + vec2(0,-dy)).rg;
+			vec2 c2 = texture2D(u_image, v_texCoord + vec2(dx,-dy)).rg;
+			vec2 c3 = texture2D(u_image, v_texCoord + vec2(-dx,0)).rg;
+			vec2 c4 = texture2D(u_image, v_texCoord).rg;
+			vec2 c5 = texture2D(u_image, v_texCoord + vec2(dx,0)).rg;
+			vec2 c6 = texture2D(u_image, v_texCoord + vec2(-dx,dy)).rg;
+			vec2 c7 = texture2D(u_image, v_texCoord + vec2(0,dy)).rg;
+			vec2 c8 = texture2D(u_image, v_texCoord + vec2(dx,dy)).rg;
+
+			// center weight -1, adjacent neighbors .2, and diagonals .05
+			vec2 laplacian = (0.05*(c0+c2+c6+c8)) + (0.2*(c1+c3+c5+c7) - c4);
+
+			float a = c4.r + (diffusion_rate_A*laplacian.r - c4.r*c4.g*c4.g + u_feed*(1.0-c4.r))*dt;
+			float b = c4.g + (diffusion_rate_B*laplacian.g + c4.r*c4.g*c4.g - (u_feed+u_kill)*c4.g)*dt;
+
 			// look up the color
-			gl_FragColor = texture2D(u_image, v_texCoord);
+			gl_FragColor = vec4(a, b, 0.0, 1.0);
+			//gl_FragColor = texture2D(u_image, v_texCoord);
 		}
 	</script>
 </head>
 <body>
 	<canvas id="canvas" tabindex="1"></canvas>
-	<canvas id="tex0" style="display: none"></canvas>
-	<canvas id="tex1" style="display: none"></canvas>
+	<canvas id="tex0" style="display: block"></canvas>
+	<canvas id="tex1" style="display: block"></canvas>
 </body>
 </html>

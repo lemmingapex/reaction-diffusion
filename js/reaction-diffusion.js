@@ -12,19 +12,53 @@ var gl;
 // the program to be run on the GPU.  has vertex and fragment shaders.
 var _program;
 
+var _texture0;
+var _texture1;
+var _swap = true;
+
 function render() {
 	// set the resolution
-	var resolutionLocation = gl.getUniformLocation(_program, "u_resolution");
-	gl.uniform2f(resolutionLocation, _canvas.width, _canvas.height);
+	var u_resolution = gl.getUniformLocation(_program, "u_resolution");
+	gl.uniform2f(u_resolution, _canvas.width, _canvas.height);
+
+	var u_feed = gl.getUniformLocation(_program, "u_feed");
+	gl.uniform1f(u_feed, _settings.feed);
+
+	var u_kill = gl.getUniformLocation(_program, "u_kill");
+	gl.uniform1f(u_kill, _settings.feed);
 
 	// Clear the canvas
 	// gl.clearColor(0, 0, 0, 0);
 	// gl.clear(gl.COLOR_BUFFER_BIT);
 
+	var u_image = gl.getUniformLocation(_program, "u_image");
+
+	// swap the textures
+	if(_swap) {
+		//gl.activeTexture(gl.TEXTURE1);
+		// render to texture1
+		//gl.bindTexture(gl.TEXTURE_2D, _texture1);
+		// pass in texture0
+		gl.uniform1i(u_image, 0);
+
+		//gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex0);
+	} else {
+		//gl.activeTexture(gl.TEXTURE0);
+		// render to texture0
+		//gl.bindTexture(gl.TEXTURE_2D, _texture0);
+		// pass in texture1
+		gl.uniform1i(u_image, 1);
+		//gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex1);
+	}
+
 	// Draw it!
 	gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+	_swap=!_swap;
+
 	// call to render
-	window.requestAnimationFrame(render, _canvas);
+	setTimeout(render, 120);
+	//window.requestAnimationFrame(render, _canvas);
 }
 
 function initTexture(textureCanvas, canvasWidth, canvasHeight) {
@@ -32,14 +66,14 @@ function initTexture(textureCanvas, canvasWidth, canvasHeight) {
 		textureCanvas.height = canvasHeight;
 		var textureContext = textureCanvas.getContext("2d");
 		var textureImage = textureContext.createImageData(canvasWidth, canvasHeight);
-		var areaPercent = 0.01;
+		var areaPercent = 0.1;
 		for (var i = 0; i < canvasHeight; i += 1) {
 			var rowIndex = i*canvasWidth;
 			for (var j = 0; j < canvasWidth; j += 1) {
 				var index = (rowIndex + j) * 4;
 				textureImage.data[index + 0] = 255;
 				if(i > (canvasHeight/2 - (areaPercent*canvasHeight)) && i < (canvasHeight/2 + (areaPercent*canvasHeight)) && j > (canvasWidth/2 - (areaPercent*canvasWidth)) && j < (canvasWidth/2 + (areaPercent*canvasWidth))) {
-					textureImage.data[index + 1] = 255;
+					textureImage.data[index + 1] = 255*Math.random();
 				} else {
 					textureImage.data[index + 1] = 0;
 				}
@@ -69,8 +103,8 @@ function init() {
 	_canvas = document.getElementById("canvas");
 	_canvas.style.left = "0px";
 	_canvas.style.top = "0px";
-	_canvas.style.width = "100%";
-	_canvas.style.height = "100%";
+	_canvas.style.width = "50%";
+	_canvas.style.height = "50%";
 	_canvas.style.zIndex = 0;
 	_canvas.width = _canvas.offsetWidth;
 	_canvas.height = _canvas.offsetHeight;
@@ -97,6 +131,9 @@ function init() {
 	gl.shaderSource(fragmentShader, document.getElementById("2d-fragment-shader").text);
 	gl.compileShader(fragmentShader);
 
+	console.log('Shader compiled successfully: ' + gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS));
+	console.log('Shader compiler log: ' + gl.getShaderInfoLog(fragmentShader));
+
 	_program = gl.createProgram();
 	gl.attachShader(_program, vertexShader);
 	gl.attachShader(_program, fragmentShader);
@@ -116,8 +153,9 @@ function init() {
 	gl.bufferData(gl.ARRAY_BUFFER, generateTrianglesArrayFromRectangle(0.0, 0.0, 1.0, 1.0), gl.STATIC_DRAW);
 
 	// Create a texture.
-	var texture = gl.createTexture();
-	gl.bindTexture(gl.TEXTURE_2D, texture);
+	_texture0 = gl.createTexture();
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, _texture0);
 
 	// parameters to render any resolution size
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -127,6 +165,19 @@ function init() {
 
 	// Upload the image into the texture.
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex0);
+
+	_texture1 = gl.createTexture();
+	gl.activeTexture(gl.TEXTURE1);
+	gl.bindTexture(gl.TEXTURE_2D, _texture1);
+
+	// parameters to render any resolution size
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+	// Upload the image into the texture.
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex1);
 
 	// look up where the vertex data needs to go.
 	var a_position = gl.getAttribLocation(_program, "a_position");
