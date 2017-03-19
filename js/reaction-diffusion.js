@@ -1,7 +1,7 @@
 // object where GUI settings are stored
 _settings = {
-	feed: 1/5,
-	kill: 1/3,
+	feed: 0.058,
+	kill: 0.06,
 	resolution: 512
 };
 
@@ -12,8 +12,8 @@ var gl;
 // the program to be run on the GPU.  has vertex and fragment shaders.
 var _program;
 
-var _texture0;
-var _texture1;
+var _framebuffer0;
+var _framebuffer1;
 var _swap = true;
 
 function render() {
@@ -25,39 +25,33 @@ function render() {
 	gl.uniform1f(u_feed, _settings.feed);
 
 	var u_kill = gl.getUniformLocation(_program, "u_kill");
-	gl.uniform1f(u_kill, _settings.feed);
-
-	// Clear the canvas
-	// gl.clearColor(0, 0, 0, 0);
-	// gl.clear(gl.COLOR_BUFFER_BIT);
+	gl.uniform1f(u_kill, _settings.kill);
 
 	var u_image = gl.getUniformLocation(_program, "u_image");
 
 	// swap the textures
 	if(_swap) {
-		//gl.activeTexture(gl.TEXTURE1);
 		// render to texture1
-		//gl.bindTexture(gl.TEXTURE_2D, _texture1);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, _framebuffer1);
 		// pass in texture0
 		gl.uniform1i(u_image, 0);
-
-		//gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex0);
+		gl.drawArrays(gl.TRIANGLES, 0, 6);
 	} else {
-		//gl.activeTexture(gl.TEXTURE0);
 		// render to texture0
-		//gl.bindTexture(gl.TEXTURE_2D, _texture0);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, _framebuffer0);
 		// pass in texture1
 		gl.uniform1i(u_image, 1);
-		//gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex1);
+		gl.drawArrays(gl.TRIANGLES, 0, 6);
 	}
 
-	// Draw it!
+	// Draw it on the canvas!
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.drawArrays(gl.TRIANGLES, 0, 6);
 
 	_swap=!_swap;
 
 	// call to render
-	setTimeout(render, 120);
+	setTimeout(render, 5);
 	//window.requestAnimationFrame(render, _canvas);
 }
 
@@ -66,15 +60,16 @@ function initTexture(textureCanvas, canvasWidth, canvasHeight) {
 		textureCanvas.height = canvasHeight;
 		var textureContext = textureCanvas.getContext("2d");
 		var textureImage = textureContext.createImageData(canvasWidth, canvasHeight);
-		var areaPercent = 0.1;
+		var areaPercent = 0.02;
 		for (var i = 0; i < canvasHeight; i += 1) {
 			var rowIndex = i*canvasWidth;
 			for (var j = 0; j < canvasWidth; j += 1) {
 				var index = (rowIndex + j) * 4;
-				textureImage.data[index + 0] = 255;
 				if(i > (canvasHeight/2 - (areaPercent*canvasHeight)) && i < (canvasHeight/2 + (areaPercent*canvasHeight)) && j > (canvasWidth/2 - (areaPercent*canvasWidth)) && j < (canvasWidth/2 + (areaPercent*canvasWidth))) {
-					textureImage.data[index + 1] = 255*Math.random();
+					textureImage.data[index + 0] = 255;
+					textureImage.data[index + 1] = 255;
 				} else {
+					textureImage.data[index + 0] = 255;
 					textureImage.data[index + 1] = 0;
 				}
 				textureImage.data[index + 2] = 0;
@@ -96,15 +91,15 @@ function generateTrianglesArrayFromRectangle(x, y, width, height) {
 function init() {
 	// settings gui with stuff like 'feed rate' and 'kill rate'
 	var gui = new dat.GUI();
-	gui.add(_settings, "feed", 0, 1).name("Feed Rate").listen();
-	gui.add(_settings, "kill", 0, 1).name("Kill Rate").listen();
+	gui.add(_settings, "feed", 0, 0.09).name("Feed Rate").listen();
+	gui.add(_settings, "kill", 0, 0.09).name("Kill Rate").listen();
 	//gui.add(_settings, "resolution", 128, 1024).name("Resolution").listen();
 
 	_canvas = document.getElementById("canvas");
 	_canvas.style.left = "0px";
 	_canvas.style.top = "0px";
-	_canvas.style.width = "50%";
-	_canvas.style.height = "50%";
+	_canvas.style.width = "100%";
+	_canvas.style.height = "100%";
 	_canvas.style.zIndex = 0;
 	_canvas.width = _canvas.offsetWidth;
 	_canvas.height = _canvas.offsetHeight;
@@ -153,9 +148,9 @@ function init() {
 	gl.bufferData(gl.ARRAY_BUFFER, generateTrianglesArrayFromRectangle(0.0, 0.0, 1.0, 1.0), gl.STATIC_DRAW);
 
 	// Create a texture.
-	_texture0 = gl.createTexture();
+	var texture0 = gl.createTexture();
 	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, _texture0);
+	gl.bindTexture(gl.TEXTURE_2D, texture0);
 
 	// parameters to render any resolution size
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -166,9 +161,14 @@ function init() {
 	// Upload the image into the texture.
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex0);
 
-	_texture1 = gl.createTexture();
+	// Attach texture0 to a framebuffer0
+	_framebuffer0 = gl.createFramebuffer();
+	gl.bindFramebuffer(gl.FRAMEBUFFER, _framebuffer0);
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture0, 0);
+
+	var texture1 = gl.createTexture();
 	gl.activeTexture(gl.TEXTURE1);
-	gl.bindTexture(gl.TEXTURE_2D, _texture1);
+	gl.bindTexture(gl.TEXTURE_2D, texture1);
 
 	// parameters to render any resolution size
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -178,6 +178,11 @@ function init() {
 
 	// Upload the image into the texture.
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex1);
+
+	// Attach texture1 to a framebuffer1
+	_framebuffer1 = gl.createFramebuffer();
+	gl.bindFramebuffer(gl.FRAMEBUFFER, _framebuffer1);
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
 
 	// look up where the vertex data needs to go.
 	var a_position = gl.getAttribLocation(_program, "a_position");
