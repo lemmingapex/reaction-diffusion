@@ -66,6 +66,8 @@
 			// center weight -1, adjacent neighbors .2, and diagonals .05
 			vec2 laplacian = (0.05*(c0+c2+c6+c8)) + (0.2*(c1+c3+c5+c7) - c4);
 
+			// diffision: a and b with both diffuse at different rates
+			// reaction: one a and bs will form one b, so b is added based on how much a and b there is in the simulation.
 			float a = c4.r + (diffusion_rate_A*laplacian.r - c4.r*c4.g*c4.g + u_feed*(1.0-c4.r))*dt;
 			float b = c4.g + (diffusion_rate_B*laplacian.g + c4.r*c4.g*c4.g - (u_feed+u_kill)*c4.g)*dt;
 

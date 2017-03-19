@@ -1,7 +1,7 @@
 // object where GUI settings are stored
 _settings = {
-	feed: 0.058,
-	kill: 0.06,
+	feed: 0.046,
+	kill: 0.059,
 	resolution: 512
 };
 
@@ -51,8 +51,9 @@ function render() {
 	_swap=!_swap;
 
 	// call to render
-	setTimeout(render, 5);
-	//window.requestAnimationFrame(render, _canvas);
+	//setTimeout(render, 20);
+	//requestAnimationFrame(render);
+	window.requestAnimationFrame(render, _canvas);
 }
 
 function initTexture(textureCanvas, canvasWidth, canvasHeight) {
@@ -60,14 +61,23 @@ function initTexture(textureCanvas, canvasWidth, canvasHeight) {
 		textureCanvas.height = canvasHeight;
 		var textureContext = textureCanvas.getContext("2d");
 		var textureImage = textureContext.createImageData(canvasWidth, canvasHeight);
-		var areaPercent = 0.02;
+		var rPercent = 0.09;
+		var c = {
+			x: canvasWidth/2,
+			y: canvasHeight/2
+		}
+		var r = Math.min(canvasWidth/2, canvasHeight/2)*rPercent;
 		for (var i = 0; i < canvasHeight; i += 1) {
 			var rowIndex = i*canvasWidth;
 			for (var j = 0; j < canvasWidth; j += 1) {
 				var index = (rowIndex + j) * 4;
-				if(i > (canvasHeight/2 - (areaPercent*canvasHeight)) && i < (canvasHeight/2 + (areaPercent*canvasHeight)) && j > (canvasWidth/2 - (areaPercent*canvasWidth)) && j < (canvasWidth/2 + (areaPercent*canvasWidth))) {
-					textureImage.data[index + 0] = 255;
-					textureImage.data[index + 1] = 255;
+				var p = {
+					x: j-c.x,
+					y: i-c.y
+				}
+				if((p.x)*(p.x) + (p.y)*(p.y) < r*r) {
+					textureImage.data[index + 0] = 100;
+					textureImage.data[index + 1] = 200 + 55*Math.random();
 				} else {
 					textureImage.data[index + 0] = 255;
 					textureImage.data[index + 1] = 0;
@@ -91,8 +101,8 @@ function generateTrianglesArrayFromRectangle(x, y, width, height) {
 function init() {
 	// settings gui with stuff like 'feed rate' and 'kill rate'
 	var gui = new dat.GUI();
-	gui.add(_settings, "feed", 0, 0.09).name("Feed Rate").listen();
-	gui.add(_settings, "kill", 0, 0.09).name("Kill Rate").listen();
+	gui.add(_settings, "feed", 0, 0.1).name("Feed Rate").listen();
+	gui.add(_settings, "kill", 0, 0.1).name("Kill Rate").listen();
 	//gui.add(_settings, "resolution", 128, 1024).name("Resolution").listen();
 
 	_canvas = document.getElementById("canvas");
@@ -153,8 +163,6 @@ function init() {
 	gl.bindTexture(gl.TEXTURE_2D, texture0);
 
 	// parameters to render any resolution size
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
@@ -171,8 +179,6 @@ function init() {
 	gl.bindTexture(gl.TEXTURE_2D, texture1);
 
 	// parameters to render any resolution size
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
