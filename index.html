@@ -54,7 +54,7 @@
 
 		void main() {
 
-			if(u_mouse.x > -2.0 && abs(u_mouse.x - v_texCoord.x) < 0.001 && abs(u_mouse.y - (1.0 - v_texCoord.y)) < 0.001) {
+			if(u_mouse.x > -2.0 && abs(u_mouse.x - v_texCoord.x) < 0.0015 && abs(u_mouse.y - (1.0 - v_texCoord.y)) < 0.0015) {
 				gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
 			} else {
 				float dx = 1.0/u_resolution.x;

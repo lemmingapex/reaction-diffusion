@@ -1,7 +1,7 @@
 // object where GUI settings are stored
 _settings = {
-	feed: 0.046, // 0.021
-	kill: 0.059, //0.055
+	feed: 0.046, // 0.021, 0.030, 0.018, 0.043, 0.011, 0.004
+	kill: 0.059, //0.055, 0.056, 0.052, 0.062, 0.045, 0.036
 	resolution: 512
 };
 
