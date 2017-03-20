@@ -5,6 +5,10 @@ _settings = {
 	resolution: 512
 };
 
+var _mouseDown = false;
+var _mouseX = -2.0;
+var _mouseY = -2.0;
+
 // canvas is the HTML5 UI element where stuff will be drawn
 var _canvas;
 // webgl context.  Let's me do gl stuff.
@@ -16,6 +20,21 @@ var _framebuffer0;
 var _framebuffer1;
 var _swap = true;
 
+function mouseDown(e) {
+	_mouseDown = true;
+	_mouseX = (e.layerX/_canvas.width);
+	_mouseY = (e.layerY/_canvas.height);
+}
+
+function mouseMove(e) {
+	_mouseX = (e.clientX/_canvas.width);
+	_mouseY = (e.clientY/_canvas.height);
+}
+
+function mouseUp(e) {
+	_mouseDown = false;
+}
+
 function render() {
 	// set the resolution
 	var u_resolution = gl.getUniformLocation(_program, "u_resolution");
@@ -26,6 +45,14 @@ function render() {
 
 	var u_kill = gl.getUniformLocation(_program, "u_kill");
 	gl.uniform1f(u_kill, _settings.kill);
+
+	var u_mouse = gl.getUniformLocation(_program, "u_mouse");
+	if(_mouseDown) {
+		console.log("" + _mouseX + " " + _mouseY);
+		gl.uniform2f(u_mouse, _mouseX, _mouseY);
+	} else {
+		gl.uniform2f(u_mouse, -2.0, -2.0);
+	}
 
 	var u_image = gl.getUniformLocation(_program, "u_image");
 
@@ -61,7 +88,7 @@ function initTexture(textureCanvas, canvasWidth, canvasHeight) {
 		textureCanvas.height = canvasHeight;
 		var textureContext = textureCanvas.getContext("2d");
 		var textureImage = textureContext.createImageData(canvasWidth, canvasHeight);
-		var rPercent = 0.09;
+		var rPercent = 0.08;
 		var c = {
 			x: canvasWidth/2,
 			y: canvasHeight/2
@@ -76,7 +103,7 @@ function initTexture(textureCanvas, canvasWidth, canvasHeight) {
 					y: i-c.y
 				}
 				if((p.x)*(p.x) + (p.y)*(p.y) < r*r) {
-					textureImage.data[index + 0] = 100;
+					textureImage.data[index + 0] = 0;
 					textureImage.data[index + 1] = 200 + 55*Math.random();
 				} else {
 					textureImage.data[index + 0] = 255;
@@ -114,6 +141,10 @@ function init() {
 	_canvas.width = _canvas.offsetWidth;
 	_canvas.height = _canvas.offsetHeight;
 	//console.log("width, height " + _canvas.width + ", " + _canvas.height);
+
+	_canvas.onmousemove = mouseMove;
+	_canvas.onmousedown = mouseDown;
+	_canvas.onmouseup = mouseUp;
 
 	// The textures contains the data for the ammount of A an B in the red and green components of the color space.
 	// Two textures are used to make the animation fast and clean.  One texture will contain the previous step, the other texture will contain the current step.  Then the texture data will be swaped.

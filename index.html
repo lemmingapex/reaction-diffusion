@@ -33,6 +33,9 @@
 
 		uniform vec2 u_resolution;
 
+		// mouse location
+		uniform vec2 u_mouse;
+
 		// feed rate
 		uniform float u_feed;
 		// kill rate
@@ -50,30 +53,35 @@
 		float dt = 1.0;
 
 		void main() {
-			float dx = 1.0/u_resolution.x;
-			float dy = 1.0/u_resolution.y;
 
-			vec2 c0 = texture2D(u_image, v_texCoord + vec2(-dx,-dy)).rg;
-			vec2 c1 = texture2D(u_image, v_texCoord + vec2(0,-dy)).rg;
-			vec2 c2 = texture2D(u_image, v_texCoord + vec2(dx,-dy)).rg;
-			vec2 c3 = texture2D(u_image, v_texCoord + vec2(-dx,0)).rg;
-			vec2 c4 = texture2D(u_image, v_texCoord).rg;
-			vec2 c5 = texture2D(u_image, v_texCoord + vec2(dx,0)).rg;
-			vec2 c6 = texture2D(u_image, v_texCoord + vec2(-dx,dy)).rg;
-			vec2 c7 = texture2D(u_image, v_texCoord + vec2(0,dy)).rg;
-			vec2 c8 = texture2D(u_image, v_texCoord + vec2(dx,dy)).rg;
+			if(u_mouse.x > -2.0 && abs(u_mouse.x - v_texCoord.x) < 0.001 && abs(u_mouse.y - (1.0 - v_texCoord.y)) < 0.001) {
+				gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+			} else {
+				float dx = 1.0/u_resolution.x;
+				float dy = 1.0/u_resolution.y;
 
-			// center weight -1, adjacent neighbors .2, and diagonals .05
-			vec2 laplacian = (0.05*(c0+c2+c6+c8)) + (0.2*(c1+c3+c5+c7) - c4);
+				vec2 c0 = texture2D(u_image, v_texCoord + vec2(-dx,-dy)).rg;
+				vec2 c1 = texture2D(u_image, v_texCoord + vec2(0,-dy)).rg;
+				vec2 c2 = texture2D(u_image, v_texCoord + vec2(dx,-dy)).rg;
+				vec2 c3 = texture2D(u_image, v_texCoord + vec2(-dx,0)).rg;
+				vec2 c4 = texture2D(u_image, v_texCoord).rg;
+				vec2 c5 = texture2D(u_image, v_texCoord + vec2(dx,0)).rg;
+				vec2 c6 = texture2D(u_image, v_texCoord + vec2(-dx,dy)).rg;
+				vec2 c7 = texture2D(u_image, v_texCoord + vec2(0,dy)).rg;
+				vec2 c8 = texture2D(u_image, v_texCoord + vec2(dx,dy)).rg;
 
-			// diffision: a and b with both diffuse at different rates
-			// reaction: one a and bs will form one b, so b is added based on how much a and b there is in the simulation.
-			float a = c4.r + (diffusion_rate_A*laplacian.r - c4.r*c4.g*c4.g + u_feed*(1.0-c4.r))*dt;
-			float b = c4.g + (diffusion_rate_B*laplacian.g + c4.r*c4.g*c4.g - (u_feed+u_kill)*c4.g)*dt;
+				// center weight -1, adjacent neighbors .2, and diagonals .05
+				vec2 laplacian = (0.05*(c0+c2+c6+c8)) + (0.2*(c1+c3+c5+c7) - c4);
 
-			// look up the color
-			gl_FragColor = vec4(a, b, 0.0, 1.0);
-			//gl_FragColor = texture2D(u_image, v_texCoord);
+				// diffision: a and b with both diffuse at different rates
+				// reaction: one a and bs will form one b, so b is added based on how much a and b there is in the simulation.
+				float a = c4.r + (diffusion_rate_A*laplacian.r - c4.r*c4.g*c4.g + u_feed*(1.0-c4.r))*dt;
+				float b = c4.g + (diffusion_rate_B*laplacian.g + c4.r*c4.g*c4.g - (u_feed+u_kill)*c4.g)*dt;
+
+				// look up the color
+				gl_FragColor = vec4(a, b, 0.0, 1.0);
+				//gl_FragColor = texture2D(u_image, v_texCoord);
+			}
 		}
 	</script>
 </head>
