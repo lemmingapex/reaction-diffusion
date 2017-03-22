@@ -93,11 +93,16 @@
 		// the texCoords passed in from the vertex shader.
 		varying vec2 v_texCoord;
 
+		uniform vec3 colorA;
+		uniform vec3 colorB;
+
 		void main() {
 			vec2 ab = texture2D(u_texture, v_texCoord).rg;
 
-			// TODO: flip red and green.  is this working?
-			gl_FragColor = vec4(ab.g, ab.r, 0.0, 1.0);
+			float ta = ab.r;
+			float tb = (1.0 - ta);
+
+			gl_FragColor = vec4(colorA.r*ta + colorB.r*tb, colorA.g*ta + colorB.g*tb, colorA.b*ta + colorB.b*tb, 1.0);
 		}
 	</script>
 </head>

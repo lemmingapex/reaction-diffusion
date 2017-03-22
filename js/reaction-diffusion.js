@@ -4,8 +4,8 @@
 _settings = {
 	feed: 0.046, // 0.021, 0.030, 0.018, 0.043, 0.011, 0.004, 0.024
 	kill: 0.059, //0.055, 0.056, 0.052, 0.062, 0.045, 0.036, 0.054
-	colorA: "#bbbb99",
-	colorB: "#00bb22",
+	colorA: "#347f7f",
+	colorB: "#ff7800",
 	resolution: 512
 };
 
@@ -69,8 +69,8 @@ function render() {
 		gl.uniform1i(u_texture, 0);
 		gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-		// gl.useProgram(_screen_program);
-		// gl.uniform1i(gl.getUniformLocation(_screen_program, "u_texture"), 1);
+		gl.useProgram(_screen_program);
+		gl.uniform1i(gl.getUniformLocation(_screen_program, "u_texture"), 1);
 	} else {
 		// render to texture0
 		gl.bindFramebuffer(gl.FRAMEBUFFER, _framebuffer0);
@@ -78,9 +78,15 @@ function render() {
 		gl.uniform1i(u_texture, 1);
 		gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-		// gl.useProgram(_screen_program);
-		// gl.uniform1i(gl.getUniformLocation(_screen_program, "u_texture"), 0);
+		gl.useProgram(_screen_program);
+		gl.uniform1i(gl.getUniformLocation(_screen_program, "u_texture"), 0);
 	}
+	gl.uniform2f(gl.getUniformLocation(_screen_program, "u_resolution"), _canvas.width, _canvas.height);
+	var cA = hexToRgb(_settings.colorA);
+	console.log(cA.r);
+	var cB = hexToRgb(_settings.colorB);
+	gl.uniform3f(gl.getUniformLocation(_screen_program, "colorA"), cA.r, cA.g, cA.b);
+	gl.uniform3f(gl.getUniformLocation(_screen_program, "colorB"), cB.r, cB.g, cB.b);
 
 	// Draw it on the canvas!
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -134,6 +140,15 @@ function generateTrianglesArrayFromRectangle(x, y, width, height) {
 	var y1 = y;
 	var y2 = y + height;
 	return new Float32Array([x1,y1, x2,y1, x1,y2, x1,y2, x2,y1, x2,y2]);
+}
+
+function hexToRgb(hex) {
+	var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	return result ? {
+		r: parseInt(result[1], 16)/255,
+		g: parseInt(result[2], 16)/255,
+		b: parseInt(result[3], 16)/255
+	} : null;
 }
 
 function main() {
