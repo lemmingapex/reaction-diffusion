@@ -1,12 +1,84 @@
-//_presets = [];
+// contains some intersting/pretty settings for the tool
+_presets = {
+	Zeus: {
+		feed: 0.021,
+		kill: 0.055,
+		colorA: "#adde83",
+		colorB: "#171a4a"
+	},
+	Poseidon: {
+		feed: 0.046,
+		kill: 0.059,
+		colorA: "#83dede",
+		colorB: "#2929c5"
+	},
+	Ares: {
+		feed: 0.030,
+		kill: 0.056,
+		colorA: "#5c2424",
+		colorB: "#13a065"
+	},
+	Athena: {
+		feed: 0.018,
+		kill: 0.052,
+		colorA: "#deb383",
+		colorB: "#c528a9"
+	},
+	Apollo: {
+		feed: 0.043,
+		kill: 0.060,
+		colorA: "#000000",
+		colorB: "#ffffff"
+	},
+	Hades: {
+		feed: 0.011,
+		kill: 0.045,
+		colorA: "#fc2828",
+		colorB: "#131137"
+	},
+	Hermes: {
+		feed: 0.004,
+		kill: 0.036,
+		colorA: "#83de8d",
+		colorB: "#c52828"
+	},
+	Iris: {
+		feed: 0.024,
+		kill: 0.054,
+		colorA: "#342910",
+		colorB: "#a7a174"
+	}
+};
 
 // object where GUI settings are stored
 _settings = {
-	feed: 0.046, // 0.021, 0.030, 0.018, 0.043, 0.011, 0.004, 0.024
-	kill: 0.059, //0.055, 0.056, 0.052, 0.062, 0.045, 0.036, 0.054
-	colorA: "#347f7f",
-	colorB: "#ff7800",
-	resolution: 512
+	presets: Object.keys(_presets)[0],
+	feed: _presets.Zeus.feed,
+	kill: _presets.Zeus.kill,
+	colorA: _presets.Zeus.colorA,
+	colorB: _presets.Zeus.colorB,
+	reset: function() {
+		var tex0 = initTexture(document.getElementById("tex0"), _canvas.width, _canvas.height);
+		gl.activeTexture(gl.TEXTURE0);
+		// Upload the image into the texture.
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex0);
+
+		var tex1 = initTexture(document.getElementById("tex1"), _canvas.width, _canvas.height);
+		gl.activeTexture(gl.TEXTURE1);
+		// Upload the image into the texture.
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex1);
+	},
+	clear: function() {
+		var tex0 = initTexture(document.getElementById("tex0"), _canvas.width, _canvas.height, 0);
+		gl.activeTexture(gl.TEXTURE0);
+		// Upload the image into the texture.
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex0);
+
+		var tex1 = initTexture(document.getElementById("tex1"), _canvas.width, _canvas.height, 0);
+		gl.activeTexture(gl.TEXTURE1);
+		// Upload the image into the texture.
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex1);
+	}
 };
 
 var _mouseDown = false;
@@ -15,12 +87,14 @@ var _mouseY = -2.0;
 
 // canvas is the HTML5 UI element where stuff will be drawn
 var _canvas;
-// webgl context.  Let's me do gl stuff.
+// webgl context.  Lets me do gl stuff.
 var gl;
-// the program to be run on the GPU.  has vertex and fragment shaders.
+
+// the programs to be run on the GPU.  has vertex and fragment shaders.
 var _rd_program;
 var _screen_program;
 
+// buffers where the textures will live
 var _framebuffer0;
 var _framebuffer1;
 var _swap = true;
@@ -40,6 +114,7 @@ function mouseUp(e) {
 	_mouseDown = false;
 }
 
+// called repeatedly to draw stuff.
 function render() {
 	gl.useProgram(_rd_program);
 	// set the resolution
@@ -83,7 +158,6 @@ function render() {
 	}
 	gl.uniform2f(gl.getUniformLocation(_screen_program, "u_resolution"), _canvas.width, _canvas.height);
 	var cA = hexToRgb(_settings.colorA);
-	console.log(cA.r);
 	var cB = hexToRgb(_settings.colorB);
 	gl.uniform3f(gl.getUniformLocation(_screen_program, "colorA"), cA.r, cA.g, cA.b);
 	gl.uniform3f(gl.getUniformLocation(_screen_program, "colorB"), cB.r, cB.g, cB.b);
@@ -95,41 +169,58 @@ function render() {
 	_swap=!_swap;
 
 	// call to render
-	//setTimeout(render, 20);
-	//requestAnimationFrame(render);
 	window.requestAnimationFrame(render, _canvas);
 }
 
-function initTexture(textureCanvas, canvasWidth, canvasHeight) {
+function initTexture(textureCanvas, canvasWidth, canvasHeight, numberOfCurves = 3) {
 		textureCanvas.width = canvasWidth;
 		textureCanvas.height = canvasHeight;
 		var textureContext = textureCanvas.getContext("2d");
 		var textureImage = textureContext.createImageData(canvasWidth, canvasHeight);
-		var rPercent = 0.08;
-		var c = {
-			x: canvasWidth/2,
-			y: canvasHeight/2
-		}
-		var r = Math.min(canvasWidth/2, canvasHeight/2)*rPercent;
+		// fill texture with chemical A
 		for (var i = 0; i < canvasHeight; i++) {
 			var rowIndex = i*canvasWidth;
 			for (var j = 0; j < canvasWidth; j++) {
 				var index = (rowIndex + j) * 4;
-				var p = {
-					x: j-c.x,
-					y: i-c.y
-				}
-				if((p.x)*(p.x) + (p.y)*(p.y) < r*r) {
-					textureImage.data[index + 0] = 0;
-					textureImage.data[index + 1] = 200 + 55*Math.random();
-				} else {
-					textureImage.data[index + 0] = 255;
-					textureImage.data[index + 1] = 0;
-				}
+				textureImage.data[index + 0] = 255;
+				textureImage.data[index + 1] = 0;
 				textureImage.data[index + 2] = 0;
 				textureImage.data[index + 3] = 255;
 			}
 		}
+
+		// 3 Bézier curves
+		for(var i=0; i<numberOfCurves; i++) {
+			// choose three random points on the canvas
+			var p0 = {
+				x: canvasWidth*Math.random(),
+				y: canvasHeight*Math.random()
+			};
+			var p1 = {
+				x: canvasWidth*Math.random(),
+				y: canvasHeight*Math.random()
+			};
+			var p2 = {
+				x: canvasWidth*Math.random(),
+				y: canvasHeight*Math.random()
+			};
+
+			// Quadratic Bézier curves between the points.
+			// iterate at a resolution of max(canvasWidth, canvasHeight)*2
+			var res = Math.max(canvasWidth, canvasHeight)*2;
+			for (var t = 0; t < 1.0; t += 1.0/res) {
+				var bx = (1.0 - t)*(1.0 - t)*p0.x + 2.0*(1.0 - t)*t*p1.x + t*t*p2.x;
+				bx = parseInt(bx, 10)%canvasWidth;
+				var by = (1.0 - t)*(1.0 - t)*p0.y + 2.0*(1.0 - t)*t*p1.y + t*t*p2.y;
+				by = parseInt(by, 10)%canvasHeight;
+				var index = (by*canvasWidth + bx)*4;
+				// remove A
+				textureImage.data[index + 0] = 0;
+				// add some B
+				textureImage.data[index + 1] = (200 + 55*Math.random())*Math.abs(Math.sin(t*res));
+			}
+		}
+
 		textureContext.putImageData(textureImage, 0, 0);
 		return textureCanvas;
 }
@@ -155,12 +246,9 @@ function main() {
 	_canvas = document.getElementById("canvas");
 	_canvas.style.left = "0px";
 	_canvas.style.top = "0px";
-	_canvas.style.width = "100%";
-	_canvas.style.height = "100%";
 	_canvas.style.zIndex = 0;
 	_canvas.width = _canvas.offsetWidth;
 	_canvas.height = _canvas.offsetHeight;
-	//console.log("width, height " + _canvas.width + ", " + _canvas.height);
 
 	_canvas.onmousemove = mouseMove;
 	_canvas.onmousedown = mouseDown;
@@ -169,20 +257,31 @@ function main() {
 	// this is the opengl stuff
 	gl = _canvas.getContext("webgl2");
 	if (!gl) {
-		console.log("Bummer, no webgl2 support!  Try google chrome?");
+		_canvas.style.display = "none";
+		var nowebgl2 = document.getElementById("nowebgl2");
+		nowebgl2.style.display = "block";
+		console.log(nowebgl2.textContent);
 		return;
 	}
 
-	// settings gui with stuff like 'feed rate' and 'kill rate'
+	// settings gui with stuff like "feed rate" and "kill rate"
 	var gui = new dat.GUI();
+	gui.add(_settings, "clear").name("Clear Screen");
+	gui.add(_settings, "reset").name("Reset Screen");
+	var presetsController = gui.add(_settings, "presets", Object.keys(_presets)).name("Presets").listen();
+	presetsController.onFinishChange(function(value) {
+		var preset = _presets[value];
+		_settings.feed = preset.feed;
+		_settings.kill = preset.kill;
+		_settings.colorA = preset.colorA;
+		_settings.colorB = preset.colorB;
+	});
 	gui.add(_settings, "feed", 0, 0.1).name("Feed Rate").listen();
 	gui.add(_settings, "kill", 0, 0.1).name("Kill Rate").listen();
 	gui.addColor(_settings, "colorA").name("Color A").listen();
 	gui.addColor(_settings, "colorB").name("Color B").listen();
-	//gui.add(_settings, "resolution", 128, 1024).name("Resolution").listen();
 
 	// setup GLSL sharders
-
 	var vertexShader = gl.createShader(gl.VERTEX_SHADER);
 	gl.shaderSource(vertexShader, document.getElementById("rd-vertex-shader").text);
 	gl.compileShader(vertexShader);
@@ -190,9 +289,8 @@ function main() {
 	var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 	gl.shaderSource(fragmentShader, document.getElementById("rd-fragment-shader").text);
 	gl.compileShader(fragmentShader);
-	//
-	// console.log('Shader compiled successfully: ' + gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS));
-	// console.log('Shader compiler log: ' + gl.getShaderInfoLog(fragmentShader));
+	// console.log("Shader compiled successfully: " + gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS));
+	// console.log("Shader compiler log: " + gl.getShaderInfoLog(fragmentShader));
 
 	var screenFragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 	gl.shaderSource(screenFragmentShader, document.getElementById("screen-fragment-shader").text);

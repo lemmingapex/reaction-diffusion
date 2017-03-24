@@ -60,6 +60,7 @@
 				float dx = 1.0/u_resolution.x;
 				float dy = 1.0/u_resolution.y;
 
+				// get values nearby for laplacian
 				vec2 c0 = texture2D(u_texture, v_texCoord + vec2(-dx,-dy)).rg;
 				vec2 c1 = texture2D(u_texture, v_texCoord + vec2(0,-dy)).rg;
 				vec2 c2 = texture2D(u_texture, v_texCoord + vec2(dx,-dy)).rg;
@@ -70,7 +71,7 @@
 				vec2 c7 = texture2D(u_texture, v_texCoord + vec2(0,dy)).rg;
 				vec2 c8 = texture2D(u_texture, v_texCoord + vec2(dx,dy)).rg;
 
-				// center weight -1, adjacent neighbors .2, and diagonals .05
+				// calculate laplacian: center weight -1, adjacent neighbors .2, and diagonals .05
 				vec2 laplacian = (0.05*(c0+c2+c6+c8)) + (0.2*(c1+c3+c5+c7) - c4);
 
 				// diffision: a and b with both diffuse at different rates
@@ -78,7 +79,7 @@
 				float a = c4.r + (diffusion_rate_A*laplacian.r - c4.r*c4.g*c4.g + u_feed*(1.0-c4.r))*dt;
 				float b = c4.g + (diffusion_rate_B*laplacian.g + c4.r*c4.g*c4.g - (u_feed+u_kill)*c4.g)*dt;
 
-				// look up the color
+				// set the color.  store A in red channel.  store B in green channel.
 				gl_FragColor = vec4(a, b, 0.0, 1.0);
 				//gl_FragColor = texture2D(u_texture, v_texCoord);
 			}
@@ -99,15 +100,27 @@
 		void main() {
 			vec2 ab = texture2D(u_texture, v_texCoord).rg;
 
+			// amount of chemical A
 			float ta = ab.r;
-			float tb = (1.0 - ta);
+			// amount of chemical B
+			float tb = ab.g;
 
-			gl_FragColor = vec4(colorA.r*ta + colorB.r*tb, colorA.g*ta + colorB.g*tb, colorA.b*ta + colorB.b*tb, 1.0);
+			// A typical weight of 2 would normally be used.  But it's rare that ta and tb are both really high in a cell.
+			// This makes the image darker typically. In order to lighter the image, I will use a weight average using 2.0 and (ta + tb) where (ta+tb) is favored
+			//float s = 2.0;
+			float weight_tatb = 9.0;
+			float weight_two = 1.0;
+			float s = (weight_tatb*(ta+tb) + weight_two*(2.0))/(weight_tatb + weight_two);
+
+			gl_FragColor = vec4((colorA.r*ta + colorB.r*tb)/s, (colorA.g*ta + colorB.g*tb)/s, (colorA.b*ta + colorB.b*tb)/s, 1.0);
 		}
 	</script>
 </head>
 <body>
+	<div id="nowebgl2">Bummer! No webgl2 support. Try google chrome, mozilla firefox, or update your graphics driver.</div>
+	<!-- rendering takes place on this canvas -->
 	<canvas id="canvas" tabindex="1"></canvas>
+	<!-- these two canvas hold the textures -->
 	<canvas id="tex0" style="display: none"></canvas>
 	<canvas id="tex1" style="display: none"></canvas>
 </body>
