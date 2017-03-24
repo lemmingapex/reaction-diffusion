@@ -1,4 +1,4 @@
-# reaction-diffusion
+# Reaction Diffusion System
 ![alt tag](rd_demo.gif)
 
 ## Run
