@@ -1,5 +1,5 @@
 # reaction-diffusion
-Models a simple [reaction diffusion system](https://en.wikipedia.org/wiki/Reaction%E2%80%93diffusion_system) on a GPU.
+![alt tag](rd_demo.gif)
 
 ## Run
 
